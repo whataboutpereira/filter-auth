@@ -16,6 +16,7 @@ type session struct {
 	user string
 }
 
+var version string
 var sessions = make(map[string]*session)
 
 func linkConnect(s *session, params []string) {
@@ -35,13 +36,21 @@ func linkConnect(s *session, params []string) {
 }
 
 func linkAuth(s *session, params []string) {
-	if len(params) != 2 {
+	if len(params) < 2 {
 		log.Fatal("invalid input, shouldn't happen")
 	}
 
-	s.user = params[0]
+	var res string
 
-	if params[1] != "pass" {
+	if version < "0.7" {
+		res = params[len(params) - 1]
+		s.user = strings.Join(params[0:len(params)-1], "|")
+	} else {
+		res = params[0]
+		s.user = strings.Join(params[1:], "|")
+	}
+
+	if res != "pass" {
 		fmt.Fprintf(os.Stderr, "failed authentication from user=%s address=%s host=%s\n", s.user, s.ip, s.rdns)
 		return
 	}
@@ -87,6 +96,8 @@ func main() {
 		if len(bits) < 6 {
 			os.Exit(1)
 		}
+
+		version = bits[1]
 
 		if bits[0] == "report" {
 			if bits[4] == "link-connect" {
